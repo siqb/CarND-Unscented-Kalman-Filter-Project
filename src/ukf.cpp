@@ -54,6 +54,76 @@ UKF::UKF() {
 
   Hint: one or more values initialized above might be wildly off...
   */
+  // initially set to false, set to true in first call of ProcessMeasurement
+  is_initialized_ = false;
+
+  // time when the state is true, in us
+  time_us_ = 0.0;
+
+  // state dimension
+  n_x_ = 5;
+
+  // Augmented state dimension
+  n_aug_ = 7;
+
+  // Sigma point spreading parameter
+  lambda_ = 3 - n_x_;
+
+  // predicted sigma points matrix
+  Xsig_pred_ = MatrixXd(n_x_, 2 * n_aug_ + 1);
+
+  //create vector for weights
+  weights_ = VectorXd(2 * n_aug_ + 1);
+
+  // the current NIS for radar
+  NIS_radar_ = 0.0;
+
+  // the current NIS for laser
+  NIS_laser_ = 0.0;
+
+  /////* initially set to false, set to true in first call of ProcessMeasurement
+  //is_initialized_ = false;
+
+  /////* time when the state is true, in us
+  ////time_us_ = 0.0;
+
+  ////set state dimension
+  //n_x_ = 5;
+
+  /////* predicted sigma points matrix
+  //Xsig_pred_ = MatrixXd(n_x_, 2 * n_aug_ + 1);
+  //Xsig_pred_.fill(0.0);
+
+  /////* Weights of sigma points
+  //weights_ = VectorXd(2 * n_aug_ + 1);
+  //weights_.fill(0.0);
+
+  ////define spreading parameter
+  //lambda_ = 3 - n_x_;
+
+  ////set state dimension
+  //n_x_ = 5;
+
+  ////set augmented dimension
+  //n_aug_ = 7;
+
+  ////  NIS radar
+  //NIS_radar_ = 0.0;
+
+  //// NIS laser
+  //NIS_laser_ = 0.0;
+
+  //// initial state vector
+  //x_ = VectorXd(n_x_);
+  //x_ << 1, 1, 1, 1, 0.1;
+
+  //// initial covariance matrix
+  //P_ = MatrixXd::Identity(n_x_, n_x_);
+  //P_ << 0.15,    0, 0, 0, 0,
+  //         0, 0.15, 0, 0, 0,
+  //         0,    0, 1, 0, 0,
+  //         0,    0, 0, 1, 0,
+  //         0,    0, 0, 0, 1;
 }
 
 UKF::~UKF() {}
@@ -69,6 +139,69 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
   Complete this function! Make sure you switch between lidar and radar
   measurements.
   */
+  // skip predict/update if sensor type is ignored
+    
+  if (!is_initialized_) {
+      //time_us_ = meas_package.timestamp_;
+      // first measurement
+      x_ << 1, 1, 1, 1, 0.1;
+
+      // init covariance matrix
+      P_ << 0.15,    0, 0, 0, 0,
+               0, 0.15, 0, 0, 0,
+               0,    0, 1, 0, 0,
+               0,    0, 0, 1, 0,
+               0,    0, 0, 0, 1;
+
+      // init timestamp
+      time_us_ = meas_package.timestamp_;
+    if (meas_package.sensor_type_ == MeasurementPackage::RADAR && use_radar_) {
+      /**
+      Convert radar from polar to cartesian coordinates and initialize state.
+      */
+      // y = z_radar - h(x') <-- whatever that means!
+
+      float rho = meas_package.raw_measurements_(0); // range
+      float phi = meas_package.raw_measurements_(1); // bearing
+      float rho_dot = meas_package.raw_measurements_(2); // velocity of rho
+      // Coordinates convertion from polar to cartesian
+      //x_(0) = rho * cos(phi); 
+      //x_(1) = rho * sin(phi);
+      //x_(2) = rho_dot * cos(phi); 
+      //x_(3) = rho_dot * sin(phi);
+      //x_(4) = 0;
+      x_ << rho * cos(phi), rho * sin(phi), rho_dot * cos(phi), rho_dot * sin(phi);
+    }
+    else if (meas_package.sensor_type_ == MeasurementPackage::LASER && use_laser_) {
+      /**
+      Initialize state.
+      */
+        //x_(0) = meas_package.raw_measurements_(0);
+        //x_(1) = meas_package.raw_measurements_(1);
+        //x_(2) = 0.0;
+        //x_(3) = 0.0;
+        //x_(4) = 0.0;
+        x_ << meas_package.raw_measurements_(0), meas_package.raw_measurements_(1), 0, 0, 0;
+    }
+    time_us_ = meas_package.timestamp_;
+    is_initialized_ = true;
+    return;
+  }
+  //compute the time elapsed between the current and previous measurements
+  float dt = (meas_package.timestamp_ - time_us_) / 1000000.0;	//dt - expressed in seconds
+  time_us_ = meas_package.timestamp_;
+  
+  Prediction(dt);
+
+  if (meas_package.sensor_type_ == MeasurementPackage::RADAR && use_radar_) {
+    // Radar updates
+	//measurement update
+	UpdateRadar(meas_package);
+  } else if (meas_package.sensor_type_ == MeasurementPackage::LASER && use_laser_) {
+    // Laser updates
+	//measurement update
+	UpdateLidar(meas_package);
+  }
 }
 
 /**
