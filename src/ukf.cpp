@@ -58,31 +58,23 @@ UKF::UKF() {
 
   Hint: one or more values initialized above might be wildly off...
   */
-  // initially set to false, set to true in first call of ProcessMeasurement
+
+  /*
+    I know it sounds dumb, but I had a very hard time initializing all
+    the members correctly! My code kept segfaulting because of it.
+    I had to comment everything out and start fresh
+    and copy them one by one. Only then did I realize what a mess I had
+    made in this section! It cost me way too much time debugging it.
+  */
+
   is_initialized_ = false;
-
-  // time when the state is true, in us
   time_us_ = 0.0;
-
-  // state dimension
   n_x_ = 5;
-
-  // Augmented state dimension
   n_aug_ = 7;
-
-  // Sigma point spreading parameter
   lambda_ = 3 - n_x_;
-
-  // predicted sigma points matrix
   Xsig_pred_ = MatrixXd(n_x_, 2 * n_aug_ + 1);
-
-  //create vector for weights
   weights_ = VectorXd(2 * n_aug_ + 1);
-
-  // the current NIS for radar
   NIS_radar_ = 0.0;
-
-  // the current NIS for laser
   NIS_laser_ = 0.0;
 
   /////* initially set to false, set to true in first call of ProcessMeasurement
